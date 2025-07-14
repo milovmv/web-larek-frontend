@@ -32,6 +32,7 @@ export class AppData extends EventEmitter implements IAppState {
     setCatalog(items: IProduct[]) {
         this.catalog = items;
         this.emitter.emit('items:changed', { catalog: this.catalog });  // Эмитируем событие об изменении каталога
+        console.log(items);
     }
 
     //Устанавливает ID товара для предпросмотра и эмитирует событие.

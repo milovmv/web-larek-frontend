@@ -17,7 +17,7 @@ export class LarekApi extends Api implements ILarekApi {
     }
 
     getProducts(): Promise<IProduct[]> {
-        return this.get<{ items: IProduct[] }>('/products')
+        return this.get<{ items: IProduct[] }>('/product')
             .then((data) => {
                 return data.items.map(item => ({
                     ...item,
