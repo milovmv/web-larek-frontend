@@ -1,8 +1,7 @@
 // src/base/EventEmitter.ts
 
-type EventName = string | RegExp; // Тип для имени события: строка или регулярное выражение
-type Callback = (...args: any[]) => void; // Тип для функции обратного вызова события
-
+type EventName = string | RegExp;
+type Callback = (...args: any[]) => void;
 
 interface IEventEmitter {
     on<T extends object>(event: EventName, callback: (args: T) => void): void;
@@ -12,7 +11,6 @@ interface IEventEmitter {
 }
 
 export class EventEmitter implements IEventEmitter {
-    // Внутреннее хранилище для обработчиков событий
     _events: Map<EventName, Set<Callback>>;
 
     constructor() {
@@ -33,10 +31,8 @@ export class EventEmitter implements IEventEmitter {
     }
 
     emit<T extends object>(event: string, args?: T): void {
-        // Вызываем обработчики, подписанные на точное имя события
         this._events.get(event)?.forEach(callback => callback(args));
 
-        // Вызываем обработчики, подписанные с помощью регулярных выражений
         this._events.forEach((callbacks, name) => {
             if (name instanceof RegExp && name.test(event)) {
                 callbacks.forEach(callback => callback(args));

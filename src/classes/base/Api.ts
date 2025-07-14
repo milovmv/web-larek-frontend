@@ -9,7 +9,7 @@ export class Api {
         this.options = {
             headers: {
                 'Content-Type': 'application/json',
-                ...(options.headers ? options.headers : {}) // Объединяем заголовки, если они есть
+                ...(options.headers ? options.headers : {})
             },
             ...options
         };
@@ -19,7 +19,10 @@ export class Api {
         if (response.ok) {
             return response.json() as Promise<T>;
         } else {
-            return response.json().then(error => Promise.reject(error as T));
+            // Если ответ не OK, пытаемся прочитать ошибку из JSON и пробросить ее
+            return response.json()
+                .then(error => Promise.reject(error))
+                .catch(() => Promise.reject(new Error(`HTTP error! Status: ${response.status} ${response.statusText}`))); // На случай, если JSON невалиден
         }
     }
 

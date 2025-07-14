@@ -1,8 +1,8 @@
 // src/classes/model/AppData.ts
 
-import { EventEmitter } from '../base/EventEmitter'; 
-import { IProduct, IOrderForm, IFormErrors, IOrderResult, IAppState } from '../../types/types'; 
-import { FormFieldName } from '../../types/events'; 
+import { EventEmitter } from '../base/EventEmitter';
+import { IProduct, IOrderForm, IFormErrors, IOrderResult, IAppState } from '../../types/types';
+import { FormFieldName } from '../../types/events';
 
 // Хранит состояние каталога, корзины, заказа и управляет бизнес-логикой.
 
@@ -19,7 +19,7 @@ export class AppData extends EventEmitter implements IAppState {
     };
     preview: string | null = null; // ID товара для предпросмотра
     formErrors: IFormErrors = {}; // Ошибки валидации формы
-    protected emitter: EventEmitter; 
+    protected emitter: EventEmitter;
 
     constructor(emitter: EventEmitter) {
         super(); // Вызываем конструктор базового EventEmitter
@@ -93,12 +93,16 @@ export class AppData extends EventEmitter implements IAppState {
 
     // Устанавливает значение поля заказа.
     setOrderField(field: FormFieldName, value: string) {
-        // Проверяем, что поле существует в IOrderForm и не является 'items' или 'total'
-        if (field in this.order && field !== 'items' && field !== 'total') {
-            (this.order[field] as string) = value; // Приводим к string, так как поля email, phone, address, payment - строки
+        if (field === 'payment') {
+            this.order.payment = value;
+        } else if (field === 'address') {
+            this.order.address = value;
+        } else if (field === 'email') {
+            this.order.email = value;
+        } else if (field === 'phone') {
+            this.order.phone = value;
         }
-        // После каждого изменения поля, валидируем форму
-        this.validateOrder();
+        this.validateOrder(); // После каждого изменения поля, валидируем форму
     }
 
     // Валидирует текущие данные заказа и обновляет ошибки.

@@ -1,57 +1,59 @@
-// src/views/Page.ts
+// src/classes/view/Page.ts
 
 import { Component } from '../base/Component';
 import { EventEmitter } from '../base/EventEmitter';
 
-// Интерфейс для данных, которые Page может отображать или использовать.
 interface IPage {
-    counter: number; // Количество товаров в корзине
-    catalog: HTMLElement[]; // Массив HTML-элементов карточек товаров
+    counter: number;
+    catalog: HTMLElement[];
+    locked: boolean; // Добавил в интерфейс, чтобы render мог его принимать
 }
 
 export class Page extends Component<IPage> {
-    // Ссылки на DOM-элементы, которыми управляет класс Page
-    protected _counter: HTMLElement; // Элемент счетчика корзины
-    protected _catalog: HTMLElement; // Контейнер для галереи товаров
-    protected _basket: HTMLButtonElement; // Кнопка корзины
+    protected _counter: HTMLElement;
+    protected _catalog: HTMLElement;
+    protected _basket: HTMLButtonElement;
+    protected _wrapper: HTMLElement; // Объявление поля
 
     constructor(container: HTMLElement, protected events: EventEmitter) {
+        super(container); // document.body
 
-        super(container);
+        this._counter = this._element.querySelector('.header__basket-counter')!;
+        this._catalog = this._element.querySelector('.gallery')!;
+        this._basket = this._element.querySelector('.header__basket')!;
+        this._wrapper = this._element.querySelector('.page__wrapper')!; // Инициализация _wrapper
 
-        // Получаем ссылки на элементы главной страницы
-        this._counter = this._element.querySelector('.header__basket-counter');
-        this._catalog = this._element.querySelector('.gallery');
-        this._basket = this._element.querySelector('.header__basket');
-
-        // Вешаем обработчик события на кнопку корзины
-        if (this._basket) {
-            this._basket.addEventListener('click', () => {
-                this.events.emit('basket:open'); // Эмитируем событие открытия корзины
-            });
-        }
+        this._basket.addEventListener('click', () => {
+            this.events.emit('basket:open');
+        });
     }
 
     set counter(value: number) {
-        this.setText(this._counter, String(value)); // Используем protected setText из Component
+        this.setText(this._counter, String(value));
     }
 
     set catalog(items: HTMLElement[]) {
-        // Очищаем текущее содержимое каталога и вставляем новые элементы.
         if (this._catalog) {
             this._catalog.replaceChildren(...items);
         }
     }
 
-    render(data?: IPage): HTMLElement {
-        // Обновляем счетчик, если данные предоставлены
+    set locked(value: boolean) {
+        if (this._wrapper) { // Проверка на существование _wrapper перед использованием
+            this.toggleClass(this._wrapper, 'page__wrapper_locked', value);
+        }
+    }
+
+    render(data?: Partial<IPage>): HTMLElement { // Изменил на Partial, так как не все поля могут быть в data
         if (data?.counter !== undefined) {
             this.counter = data.counter;
         }
-        // Обновляем каталог, если данные предоставлены
         if (data?.catalog) {
             this.catalog = data.catalog;
         }
-        return this._element; // Возвращаем корневой элемент, как требует Component
+        if (data?.locked !== undefined) {
+            this.locked = data.locked;
+        }
+        return this._element;
     }
 }

@@ -1,14 +1,17 @@
-// src/base/Component.ts
+// src/classes/base/Component.ts
 
 export abstract class Component<T> {
-    // Защищенное поле, содержащее корневой DOM-элемент компонента.
-    // Оно будет доступно в дочерних классах.
     protected _element: HTMLElement;
 
     constructor(container: HTMLElement | HTMLTemplateElement) {
-        // Если передан шаблон, клонируем его содержимое.
         if (container instanceof HTMLTemplateElement) {
-            this._element = container.content.firstElementChild?.cloneNode(true) as HTMLElement;
+            // Если передан шаблон, клонируем его содержимое.
+            // Важно: firstElementChild может быть null, если шаблон пуст или содержит только текст/комментарии.
+            const clonedElement = container.content.firstElementChild?.cloneNode(true);
+            if (!clonedElement) {
+                throw new Error('Template content has no first element to clone.');
+            }
+            this._element = clonedElement as HTMLElement;
         } else {
             // Иначе используем переданный HTML-элемент напрямую.
             this._element = container;

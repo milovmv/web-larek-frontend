@@ -1,9 +1,8 @@
-import { IOrderForm } from '../types/types'; 
+import { IOrderForm } from '../types/types';
 
-export type FormFieldName = keyof IOrderForm;
+export type FormFieldName = 'payment' | 'address' | 'email' | 'phone'; // Уточнил тип
 
 export interface IOrderFieldChangeEvent {
-
     field: FormFieldName;
     value: string;
 }

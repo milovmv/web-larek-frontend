@@ -1,45 +1,58 @@
 // src/classes/model/CartService.ts
 
-import { EventEmitter } from '../base/EventEmitter'; 
-import { IProduct } from '../../types/types'; 
-import { AppData } from './AppData'; 
+import { AppData } from './AppData';
+import { EventEmitter } from '../base/EventEmitter';
+import { IProduct } from '../../types/types';
 
-//Класс-сервис, отвечающий за управление логикой корзины покупок.
 export class CartService {
-    protected appData: AppData;
-    protected events: EventEmitter; 
-
-    constructor(appData: AppData, events: EventEmitter) {
-        this.appData = appData;
-        this.events = events; 
-    }
-    //Добавляет товар в корзину через AppData.
-    addToCart(product: IProduct): void {
-        this.appData.addToBasket(product);
+    constructor(protected appData: AppData, protected events: EventEmitter) {
+        // Конструктор CartService
     }
 
-    // Удаляет товар из корзины через AppData.
-    removeFromCart(productId: string): void {
-        this.appData.removeFromBasket(productId);
+    addProduct(product: IProduct): void {
+        if (!this.isProductInCart(product.id)) {
+            this.appData.addToBasket(product);
+            this.events.emit('cart:changed');
+            console.log(`Товар "${product.title}" добавлен в корзину.`);
+        } else {
+            console.warn(`Товар "${product.title}" (ID: ${product.id}) уже находится в корзине.`);
+        }
     }
 
-    // Получает текущий список товаров в корзине из AppData.
+    removeProduct(id: string): void {
+        if (this.isProductInCart(id)) {
+            this.appData.removeFromBasket(id);
+            this.events.emit('cart:changed');
+            console.log(`Товар с ID ${id} удален из корзины.`);
+        } else {
+            console.warn(`Товар с ID ${id} не найден в корзине, удаление невозможно.`);
+        }
+    }
+
     getCartItems(): IProduct[] {
         return this.appData.getBasketItems();
     }
 
-    // Получает общую стоимость товаров в корзине из AppData.
     getCartTotal(): number {
         return this.appData.getBasketTotal();
     }
 
-    // Очищает все товары из корзины через AppData.
-    clearCart(): void {
-        this.appData.clearBasket();
+    getCartItemCount(): number {
+        return this.appData.basket.length;
     }
 
-    // Получает количество уникальных товаров в корзине.
-    getCartItemCount(): number {
-        return this.appData.getBasketItems().length;
+    clearCart(): void {
+        this.appData.clearBasket();
+        this.events.emit('cart:changed');
+        console.log('Корзина была очищена.');
+    }
+
+    isProductInCart(productId: string): boolean {
+        return this.appData.basket.some(item => item.id === productId);
+    }
+
+    getCartItemsIds(): string[] {
+        // Получаем все товары в корзине и преобразуем их в массив только ID
+        return this.appData.basket.map(item => item.id);
     }
 }
