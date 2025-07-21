@@ -2,137 +2,176 @@
 
 import { EventEmitter } from '../base/EventEmitter';
 import { IProduct, IOrderForm, IFormErrors, IOrderResult, IAppState } from '../../types/types';
-import { FormFieldName } from '../../types/events';
+// FormFieldName больше не нужен, если вы используете keyof IOrderForm
+// import { FormFieldName } from '../../types/events'; 
 
 // Хранит состояние каталога, корзины, заказа и управляет бизнес-логикой.
 
-export class AppData extends EventEmitter implements IAppState {
-    catalog: IProduct[]; // Весь каталог товаров
-    basket: IProduct[] = []; // Товары в корзине (полные объекты IProduct)
-    order: IOrderForm = { // Данные текущего заказа
-        payment: 'card', // Значение по умолчанию
+export class AppData implements IAppState {
+    catalog: IProduct[];
+    basket: IProduct[] = [];
+    order: IOrderForm = {
+        payment: 'card',
         address: '',
         email: '',
         phone: '',
         items: [],
         total: 0
     };
-    preview: string | null = null; // ID товара для предпросмотра
-    formErrors: IFormErrors = {}; // Ошибки валидации формы
-    protected emitter: EventEmitter;
+    preview: string | null = null;
+    formErrors: IFormErrors = {};
+    protected events: EventEmitter;
 
-    constructor(emitter: EventEmitter) {
-        super(); // Вызываем конструктор базового EventEmitter
-        this.emitter = emitter; // Сохраняем ссылку на EventEmitter для эмиссии событий
+    constructor(events: EventEmitter) {
+        this.events = events;
+        console.log('AppData: Конструктор вызван. EventEmitter установлен.');
     }
 
     // --- Методы для управления каталогом ---
 
-    //Устанавливает каталог товаров и эмитирует событие об обновлении.
     setCatalog(items: IProduct[]) {
         this.catalog = items;
-        this.emitter.emit('items:changed', { catalog: this.catalog });  // Эмитируем событие об изменении каталога
-        console.log(items);
+        console.log('AppData: setCatalog вызван. Количество товаров:', this.catalog.length);
+        this.events.emit('items:changed', { items: this.catalog });
+        console.log('AppData: Событие "items:changed" эмитировано.');
     }
 
-    //Устанавливает ID товара для предпросмотра и эмитирует событие.
     setPreview(id: string) {
         this.preview = id;
-        this.emitter.emit('preview:changed', { id }); // Эмитируем событие об изменении предпросмотра
+        console.log('AppData: setPreview вызван. ID предпросмотра:', id);
+        this.events.emit('preview:changed', { id });
+        console.log('AppData: Событие "preview:changed" эмитировано.');
     }
 
-    //Возвращает товар по его ID из каталога.
     getProduct(id: string): IProduct | undefined {
-        return this.catalog.find(item => item.id === id);
+        const product = this.catalog.find(item => item.id === id);
+        console.log(`AppData: getProduct вызван. ID: ${id}. Найден: ${!!product}`);
+        return product;
     }
 
     // --- Методы для управления корзиной ---
 
-    // Добавляет товар в корзину.
     addToBasket(item: IProduct) {
-        if (!this.basket.some(product => product.id === item.id)) { // Проверяем, нет ли уже товара в корзине
+        if (!this.basket.some(product => product.id === item.id)) {
             this.basket.push(item);
-            this.updateBasket(); // Обновляем корзину и эмитируем изменения
+            console.log('AppData: addToBasket вызван. Товар добавлен:', item.title);
+            this.updateBasket();
+        } else {
+            console.log('AppData: addToBasket вызван. Товар уже в корзине:', item.title);
         }
     }
 
-    // Удаляет товар из корзины по его ID.
     removeFromBasket(id: string) {
+        const initialLength = this.basket.length;
         this.basket = this.basket.filter(item => item.id !== id);
-        this.updateBasket(); // Обновляем корзину и эмитируем изменения
+        if (this.basket.length < initialLength) {
+            console.log('AppData: removeFromBasket вызван. Товар удален. ID:', id);
+            this.updateBasket();
+        } else {
+            console.log('AppData: removeFromBasket вызван. Товар не найден для удаления. ID:', id);
+        }
     }
 
-    // Возвращает текущее содержимое корзины.
     getBasketItems(): IProduct[] {
+        console.log('AppData: getBasketItems вызван. Товаров в корзине:', this.basket.length);
         return this.basket;
     }
 
-    // Рассчитывает общую стоимость товаров в корзине.
     getBasketTotal(): number {
-        return this.basket.reduce((sum, item) => sum + (item.price || 0), 0);
+        const total = this.basket.reduce((sum, item) => sum + (item.price || 0), 0);
+        console.log('AppData: getBasketTotal вызван. Общая сумма:', total);
+        return total;
     }
 
-    // Возвращает массив ID товаров в корзине.
     getBasketItemsIds(): string[] {
-        return this.basket.map(item => item.id);
+        const ids = this.basket.map(item => item.id);
+        console.log('AppData: getBasketItemsIds вызван. ID товаров в корзине:', ids);
+        return ids;
     }
 
-    // Очищает корзину.
     clearBasket() {
         this.basket = [];
-        this.updateBasket(); // Обновляем корзину и эмитируем изменения
+        console.log('AppData: clearBasket вызван. Корзина очищена.');
+        this.updateBasket();
     }
 
-    // Внутренний метод для обновления состояния корзины и эмиссии событий.
     protected updateBasket() {
-        this.order.items = this.getBasketItemsIds(); // Обновляем список ID в объекте заказа
-        this.order.total = this.getBasketTotal();   // Обновляем общую сумму в объекте заказа
-        this.emitter.emit('basket:changed', this.basket); // Эмитируем событие об изменении корзины
+        this.order.items = this.getBasketItemsIds();
+        this.order.total = this.getBasketTotal();
+        console.log('AppData: updateBasket вызван. Корзина обновлена. Товар ID:', this.order.items, 'Сумма:', this.order.total);
+        this.events.emit('basket:changed', this.basket);
+        console.log('AppData: Событие "basket:changed" эмитировано.');
     }
 
     // --- Методы для управления формой заказа ---
 
     // Устанавливает значение поля заказа.
-    setOrderField(field: FormFieldName, value: string) {
-        if (field === 'payment') {
-            this.order.payment = value;
-        } else if (field === 'address') {
-            this.order.address = value;
-        } else if (field === 'email') {
-            this.order.email = value;
-        } else if (field === 'phone') {
-            this.order.phone = value;
+    setOrderField(field: keyof IOrderForm, value: string) {
+        if (field === 'payment' || field === 'address' || field === 'email' || field === 'phone') {
+             (this.order[field] as string) = value;
+             console.log(`AppData: setOrderField вызван. Поле: '${field}', Значение: '${value}'.`);
+             // Валидацию теперь вызывают в презентере
+        } else {
+            console.warn(`AppData: setOrderField вызван с некорректным полем: '${field}'.`);
         }
-        this.validateOrder(); // После каждого изменения поля, валидируем форму
     }
 
-    // Валидирует текущие данные заказа и обновляет ошибки.
-    validateOrder(): boolean {
+    setPaymentMethod(method: 'card' | 'cash') {
+        this.order.payment = method;
+        console.log(`AppData: setPaymentMethod вызван. Метод оплаты: '${method}'.`);
+        // Валидацию теперь вызывают в презентере
+    }
+
+    /**
+     * Валидирует текущие данные заказа и обновляет ошибки в зависимости от текущего шага формы.
+     * @param currentFormType Тип текущей формы ('address' или 'contacts').
+     */
+    validateOrder(currentFormType: 'address' | 'contacts'): boolean { // <-- ИЗМЕНЕНО
         const errors: IFormErrors = {};
-        if (!this.order.payment) {
-            errors.payment = 'Необходимо выбрать способ оплаты';
-        }
-        if (!this.order.address) {
-            errors.address = 'Необходимо указать адрес';
-        }
-        if (!this.order.email) {
-            errors.email = 'Необходимо указать email';
-        } else if (!/^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/.test(this.order.email)) {
-            errors.email = 'Некорректный email';
-        }
-        if (!this.order.phone) {
-            errors.phone = 'Необходимо указать телефон';
-        } else if (!/^\+?\d{10,15}$/.test(this.order.phone)) { // Простая валидация номера телефона
-            errors.phone = 'Некорректный номер телефона';
+
+        if (currentFormType === 'address') {
+            // Валидация способа оплаты
+            if (!this.order.payment) {
+                errors.payment = 'Необходимо выбрать способ оплаты';
+            }
+
+            // Валидация адреса
+            if (!this.order.address || this.order.address.trim() === '') {
+                errors.address = 'Необходимо указать адрес доставки';
+            } else if (this.order.address.trim().length < 5) { // Простая валидация длины адреса
+                errors.address = 'Адрес должен содержать не менее 5 символов';
+            }
+        } else if (currentFormType === 'contacts') {
+            // Валидация email
+            if (!this.order.email || this.order.email.trim() === '') {
+                errors.email = 'Необходимо указать email';
+            } else if (!/^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/.test(this.order.email)) {
+                errors.email = 'Некорректный email';
+            }
+
+            // Валидация телефона
+            if (!this.order.phone || this.order.phone.trim() === '') {
+                errors.phone = 'Необходимо указать телефон';
+            } else if (!/^\+?\d{10,15}$/.test(this.order.phone)) { // Простая валидация номера телефона
+                errors.phone = 'Некорректный номер телефона';
+            }
+        } else {
+            // Если передан неизвестный тип формы, можно выбросить ошибку или валидировать все
+            console.warn(`AppData: validateOrder вызван с неизвестным типом формы: ${currentFormType}. Валидация не выполнена.`);
         }
 
         this.formErrors = errors;
-        this.emitter.emit('formErrors:changed', this.formErrors); // Эмитируем событие об изменении ошибок
+        console.log(`AppData: Валидация заказа (${currentFormType}) завершена. Ошибки:`, errors);
+        this.events.emit('formErrors:changed', this.formErrors);
+        console.log('AppData: Событие "formErrors:changed" эмитировано.');
 
-        return Object.keys(errors).length === 0; // Форма валидна, если нет ошибок
+        const isValid = Object.keys(errors).length === 0;
+        this.events.emit('orderForm:validity:changed', { isValid: isValid, errors: errors });
+        console.log(`AppData: Событие "orderForm:validity:changed" эмитировано. Валидно: ${isValid}`);
+
+        return isValid;
     }
 
-    //Сбрасывает данные заказа к начальному состоянию.
     resetOrder() {
         this.order = {
             payment: 'card',
@@ -143,14 +182,15 @@ export class AppData extends EventEmitter implements IAppState {
             total: 0
         };
         this.formErrors = {};
+        console.log('AppData: resetOrder вызван. Данные заказа сброшены.');
     }
 
     // --- Общие методы ---
 
-    // Сбрасывает все данные приложения к начальному состоянию.
     clearAllData() {
         this.basket = [];
         this.resetOrder();
         this.preview = null;
+        console.log('AppData: clearAllData вызван. Все данные приложения сброшены.');
     }
 }

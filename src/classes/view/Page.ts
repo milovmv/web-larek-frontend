@@ -15,7 +15,7 @@ export class Page extends Component<IPage> {
     protected _basket: HTMLButtonElement;
     protected _wrapper: HTMLElement; // Объявление поля
 
-    constructor(container: HTMLElement, protected events: EventEmitter) {
+    constructor(container: HTMLElement | HTMLTemplateElement, protected events: EventEmitter) {
         super(container); // document.body
 
         this._counter = this._element.querySelector('.header__basket-counter')!;

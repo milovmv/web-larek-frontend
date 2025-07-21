@@ -15,7 +15,7 @@ export class BasketView extends Component<IBasketView> {
     protected _total: HTMLElement;
     protected _button: HTMLButtonElement;
 
-    constructor(container: HTMLElement, protected events: EventEmitter) {
+    constructor(container: HTMLElement | HTMLTemplateElement, protected events: EventEmitter) {
         super(container);
 
         this._list = this._element.querySelector('.basket__list')!;

@@ -18,8 +18,10 @@ export class OrderFormContacts extends Component<IOrderFormContacts> {
     protected _submitButton: HTMLButtonElement;
     protected _errorsContainer: HTMLElement;
 
-    constructor(container: HTMLElement, protected events: EventEmitter) {
+    constructor(container: HTMLElement | HTMLTemplateElement, protected events: EventEmitter) {
         super(container);
+
+        this._element.classList.add('contacts');
 
         this._emailInput = this._element.querySelector('[name="email"]')!;
         this._phoneInput = this._element.querySelector('[name="phone"]')!;

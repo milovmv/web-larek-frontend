@@ -2,49 +2,78 @@
 
 import { Component } from '../base/Component';
 import { EventEmitter } from '../base/EventEmitter';
-import { IProduct } from '../../types/types';
+import { IProduct } from '../../types/types'; // Убедитесь, что ваш IProduct корректен
 
+// Интерфейс для данных, которые Card может отображать
+// Расширяет IProduct, добавляя специфичные для UI поля
 export interface ICardData extends IProduct {
-    index?: number;
-    description?: string;
-    buttonText?: string;
-    buttonDisabled?: boolean;
+    index?: number; // Для нумерации в корзине
+    description?: string; // Для подробного описания в предпросмотре
+    buttonText?: string; // Текст на кнопке (например, "В корзину", "Удалить")
+    buttonDisabled?: boolean; // Состояние активности кнопки
 }
 
+// Интерфейс для действий, которые можно привязать к Card
 export interface ICardActions {
-    onClick?: (event: MouseEvent) => void;
-    onButtonClick?: (event: MouseEvent) => void;
+    onClick?: (event: MouseEvent) => void; // Общий клик по карточке
+    onButtonClick?: (event: MouseEvent) => void; // Клик по основной кнопке
+    onDeleteClick?: (event: MouseEvent) => void; // Клик по кнопке удаления в корзине
 }
 
+// Класс Card для отображения товаров в различных контекстах
 export class Card extends Component<ICardData> {
-    protected _title: HTMLElement;
-    protected _image: HTMLImageElement;
-    protected _price: HTMLElement;
-    protected _category?: HTMLElement;
-    protected _description?: HTMLElement;
-    protected _button?: HTMLButtonElement;
-    protected _index?: HTMLElement;
+    // Свойства для элементов DOM. Объявляем их как "могут быть null",
+    // потому что не все элементы будут присутствовать во всех шаблонах.
+    protected _title: HTMLElement | null;
+    protected _image: HTMLImageElement | null;
+    protected _price: HTMLElement | null;
+    protected _category: HTMLElement | null;
+    protected _description: HTMLElement | null;
+    protected _button: HTMLButtonElement | null;
+    protected _index: HTMLElement | null; // Элемент для номера в корзине
+    protected _deleteButton: HTMLButtonElement | null; // Кнопка удаления для элементов корзины
 
-    constructor(container: HTMLElement, protected events: EventEmitter, actions?: ICardActions) {
-        super(container);
+    // Конструктор принимает HTMLTemplateElement (или HTMLElement) и EventEmitter.
+    // actions теперь опциональны и содержат функции обратного вызова.
+    constructor(container: HTMLElement | HTMLTemplateElement, protected events: EventEmitter, actions?: ICardActions) {
+        super(container); // Базовый Component уже клонирует содержимое шаблона
 
-        this._title = this._element.querySelector('.card__title')!;
-        this._image = this._element.querySelector('.card__image')!;
-        this._price = this._element.querySelector('.card__price')!;
+        // Инициализируем свойства DOM-элементов.
+        // Используем querySelector и приводим к конкретным типам.
+        // Если элемент не найден, свойство останется null.
+        this._title = this._element.querySelector('.card__title');
+        this._image = this._element.querySelector('.card__image');
+        this._price = this._element.querySelector('.card__price');
         this._category = this._element.querySelector('.card__category');
         this._description = this._element.querySelector('.card__text');
-        // Селекторы для кнопки: сначала card__button, если нет, то button.
-        // Это позволяет использовать одну Card для разных шаблонов (каталог, предпросмотр, корзина)
-        this._button = this._element.querySelector('.card__button') || this._element.querySelector('.button') as HTMLButtonElement;
         this._index = this._element.querySelector('.basket__item-index');
+        this._deleteButton = this._element.querySelector('.basket__item-delete');
 
+        // Поиск основной кнопки: сначала .card__button, если не найдена, то просто .button
+        this._button = this._element.querySelector('.card__button') as HTMLButtonElement || 
+                       this._element.querySelector('.button') as HTMLButtonElement || 
+                       null; // Если ни одна не найдена, останется null
+
+        // Привязка обработчиков событий
+        // Общий клик по карточке (например, для открытия предпросмотра)
         if (actions?.onClick) {
             this._element.addEventListener('click', actions.onClick);
         }
+
+        // Клик по основной кнопке (например, "В корзину", "Купить")
         if (actions?.onButtonClick && this._button) {
             this._button.addEventListener('click', actions.onButtonClick);
         }
+
+        // Клик по кнопке удаления (для элементов корзины)
+        if (actions?.onDeleteClick && this._deleteButton) {
+            this._deleteButton.addEventListener('click', actions.onDeleteClick);
+        }
     }
+
+    // --- Сеттеры для данных ---
+    // Каждый сеттер проверяет, существует ли соответствующий DOM-элемент,
+    // прежде чем пытаться им манипулировать. Это предотвращает ошибки 'null'.
 
     set id(value: string) {
         this._element.dataset.id = value;
@@ -55,48 +84,66 @@ export class Card extends Component<ICardData> {
     }
 
     set title(value: string) {
-        this.setText(this._title, value);
+        if (this._title) {
+            this.setText(this._title, value);
+        }
+        // Убраны console.warn, так как теперь Card гибкий к отсутствию элементов.
+        // Логи могут быть добавлены в презентере, если нужно отследить отсутствие
+        // критически важных для конкретного шаблона элементов.
     }
 
     set image(value: string) {
-        this.setImage(this._image, value, this.title);
+        if (this._image) {
+            this.setImage(this._image, value, this.title);
+        }
     }
 
     set price(value: number | null) {
-        if (value === null) {
-            this.setText(this._price, 'Бесценно');
-            // Если цена бесценна, отключаем кнопку, если она не 'Удалить'
-            if (this._button && this._button.textContent !== 'Удалить') {
-                this.setDisabled(this._button, true);
-            }
-        } else {
-            this.setText(this._price, `${value} синапсов`);
-            // Если цена есть, и кнопка не 'Удалить', включаем ее
-            if (this._button && this._button.textContent !== 'Удалить') {
-                this.setDisabled(this._button, false);
+        if (this._price) {
+            if (value === null) {
+                this.setText(this._price, 'Бесценно');
+            } else {
+                this.setText(this._price, `${value} синапсов`);
             }
         }
+        // Логика состояния кнопки (disabled) и текста кнопки перенесена в render
+        // или должна управляться презентером напрямую через buttonText/buttonDisabled.
     }
 
     set category(value: string) {
         if (this._category) {
             this.setText(this._category, value);
-            this._category.className = 'card__category'; // Сброс до базового класса
-            this.toggleClass(this._category, this.getCategoryClass(value), true);
+            // Перед добавлением нового класса, удаляем старые классы категорий,
+            // чтобы корректно отображать разные категории.
+            // Примечание: предполагается, что getCategoryClass возвращает ТОЛЬКО класс цвета.
+            const newCategoryClass = this.getCategoryClass(value);
+            
+            // Удаляем все предыдущие классы, начинающиеся с 'card__category_'
+            Array.from(this._category.classList).forEach(cls => {
+                if (cls.startsWith('card__category_') && cls !== 'card__category') {
+                    this._category?.classList.remove(cls);
+                }
+            });
+
+            if (newCategoryClass) {
+                this.toggleClass(this._category, newCategoryClass, true); // Добавляем новый класс
+            }
         }
     }
 
     set description(value: string | undefined) {
         if (this._description) {
+            // Если значение undefined или пустая строка, скрываем элемент.
             this.setText(this._description, value || '');
-            this.setHidden(this._description, !value); // Скрываем, если нет текста
+            this.setHidden(this._description, !value);
         }
     }
 
     set index(value: number | undefined) {
         if (this._index) {
+            // Если значение undefined, скрываем элемент, иначе отображаем номер.
             this.setText(this._index, String(value || ''));
-            this.setHidden(this._index, value === undefined); // Скрываем, если нет индекса
+            this.setHidden(this._index, value === undefined);
         }
     }
 
@@ -112,50 +159,62 @@ export class Card extends Component<ICardData> {
         }
     }
 
-    render(data: ICardData): HTMLElement {
-        this.id = data.id;
-        this.title = data.title;
-        this.image = data.image;
-        this.price = data.price; // Сеттер price уже обрабатывает "Бесценно" и состояние кнопки
+    // --- Метод render для обновления представления карточки ---
+    // Этот метод вызывается презентером для обновления Card данными.
+    // Он безопасно устанавливает свойства, проверяя их наличие.
+    public render(data?: ICardData): HTMLElement {
+        if (data) {
+            // Установка обязательных полей
+            if (data.id !== undefined) this.id = data.id;
+            if (data.title !== undefined) this.title = data.title;
+            if (data.price !== undefined) this.price = data.price;
 
-        // Опциональные поля
-        if (data.category) this.category = data.category;
-        this.description = data.description; // Сеттер уже управляет видимостью
-        this.index = data.index; // Сеттер уже управляет видимостью
+            // Установка опциональных полей (только если они переданы)
+            if (data.image !== undefined) this.image = data.image;
+            if (data.category !== undefined) this.category = data.category;
+            if (data.description !== undefined) this.description = data.description;
+            if (data.index !== undefined) this.index = data.index;
 
-        // Логика кнопки
-        if (data.buttonText !== undefined) {
-            this.buttonText = data.buttonText;
-        } else if (this._button) {
-            // Если buttonText не передан, установим его по умолчанию
-            this.buttonText = data.price === null ? 'Недоступно' : 'В корзину';
+            // Логика кнопки: если buttonText передан, используем его.
+            // Иначе, если цена null, текст "Недоступно", в противном случае "В корзину".
+            if (data.buttonText !== undefined) {
+                this.buttonText = data.buttonText;
+            } else if (this._button) { // Только если кнопка существует в этом шаблоне
+                this.buttonText = data.price === null ? 'Недоступно' : 'В корзину';
+            }
+
+            // Логика активности кнопки: если buttonDisabled передан, используем его.
+            // Иначе, если цена null, кнопка отключается.
+            if (data.buttonDisabled !== undefined) {
+                this.buttonDisabled = data.buttonDisabled;
+            } else { // Если buttonDisabled не передан, выводим из цены
+                this.buttonDisabled = data.price === null;
+            }
+        } else {
+            console.warn('Card: render called without data.'); // Предупреждение, если данные не переданы
         }
 
-        if (data.buttonDisabled !== undefined) {
-            this.buttonDisabled = data.buttonDisabled;
-        } else if (this._button && this._button.textContent !== 'Удалить') {
-            // Если не задано явно, и это не кнопка "Удалить", то зависит от цены
-            this.buttonDisabled = data.price === null;
-        }
-
-
-        return this._element;
+        return this._element; // Возвращаем корневой DOM-элемент карточки
     }
 
+    // Вспомогательный метод для получения класса категории
     private getCategoryClass(category: string): string {
         switch (category) {
-            case 'софт-скилл':
+            case 'софт-скил':
                 return 'card__category_soft';
             case 'другое':
                 return 'card__category_other';
-            case 'хард-скилл':
+            case 'хард-скил':
                 return 'card__category_hard';
             case 'дополнительное':
                 return 'card__category_additional';
-            case 'кнопка': // Этого класса нет в вашей верстке, но если понадобится
+            case 'кнопка': // Если у вас есть такая категория, иначе удалите
                 return 'card__category_button';
             default:
-                return '';
+                // Если категория неизвестна, можно вернуть пустую строку
+                // или класс по умолчанию, если он есть.
+                console.warn('Card: Unknown category encountered:', category);
+                return ''; 
         }
     }
 }

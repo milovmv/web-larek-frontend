@@ -12,7 +12,7 @@ export class SuccessView extends Component<ISuccessView> {
     protected _closeButton: HTMLButtonElement;
     protected _totalDisplay: HTMLElement;
 
-    constructor(container: HTMLElement, protected events: EventEmitter) {
+    constructor(container: HTMLElement | HTMLTemplateElement, protected events: EventEmitter) {
         super(container);
 
         this._closeButton = this._element.querySelector('.order-success__close')!;
